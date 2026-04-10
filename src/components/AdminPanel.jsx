@@ -141,7 +141,7 @@ const AdminPanel = ({ pets, refreshPets }) => {
                   disabled={isSubmitting}
                   className="w-full bg-teal-600 text-white py-5 rounded-[1.5rem] font-black shadow-xl shadow-teal-100 hover:bg-teal-700 hover:-translate-y-1 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:bg-slate-300"
                 >
-                  {isSubmitting ? "Syncing..." : "Add to Inventory"}
+                  {isSubmitting ? "Syncing..." : "Add new pet"}
                 </button>
               </form>
             </div>

@@ -1,23 +1,40 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, Navigate, useNavigate } from 'react-router-dom';
+import axios from 'axios';
+
+// --- CLEAN IMPORTS ---
 import PetCard from './components/PetCard';
 import PetDetailModal from './components/PetDetailModal';
 import AdminPanel from './components/AdminPanel';
 import Store from './Store'; 
+import Login from './pages/Login'; 
+import Signup from './pages/Signup'; 
+
+// Import BOTH forms
+import AddProductForm from './pages/AddProductForm';
+import AddPetForm from './pages/AddPetForm';
+
+// --- AUTH PROTECTION COMPONENT ---
+const ProtectedRoute = ({ children }) => {
+  const isAdmin = localStorage.getItem('isAdmin') === 'true';
+  return isAdmin ? children : <Navigate to="/login" replace />;
+};
 
 // --- COMPONENT 1: THE CUSTOMER VIEW (Main Gallery) ---
-const MainGallery = ({ pets }) => {
+const MainGallery = ({ pets, isLoggedIn, username, onLogout }) => {
   const [selectedSpecies, setSelectedSpecies] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPet, setSelectedPet] = useState(null);
-
+  const navigate = useNavigate();
   const gallerySectionRef = useRef(null);
 
   const scrollToGallery = () => {
-    gallerySectionRef.current?.scrollIntoView({ 
-      behavior: 'smooth', 
-      block: 'start' 
-    });
+    gallerySectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const handleAdminClick = () => {
+    const isAdmin = localStorage.getItem('isAdmin') === 'true';
+    isAdmin ? navigate('/admin') : navigate('/login');
   };
 
   const filteredPets = pets.filter(pet => {
@@ -32,11 +49,9 @@ const MainGallery = ({ pets }) => {
 
   return (
     <div className="h-screen bg-white font-sans text-gray-900 overflow-hidden flex flex-col">
-      
-      {/* Main Content Area */}
       <main className="flex-1 overflow-y-auto scroll-smooth">
         
-        {/* --- 1. TOP NAVBAR (Exact match to your design) --- */}
+        {/* --- NAVBAR --- */}
         <nav className="flex items-center justify-between px-10 py-6 bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-slate-50">
           <div className="flex items-center gap-12">
             <div className="flex items-center gap-2 text-teal-600">
@@ -57,15 +72,33 @@ const MainGallery = ({ pets }) => {
           </div>
 
           <div className="flex items-center gap-6 text-sm font-bold">
-            <Link to="/admin" className="text-slate-400 hover:text-slate-600 transition-colors">Admin</Link>
-            <button className="text-slate-600 hover:text-teal-600">Log in</button>
-            <button className="bg-[#2eb0a1] text-white px-8 py-3 rounded-xl hover:bg-teal-700 transition-all shadow-xl shadow-teal-100">
-              Sign up
+            <button 
+              onClick={handleAdminClick} 
+              className="text-slate-400 hover:text-slate-600 transition-colors"
+            >
+              Admin
             </button>
+
+            {isLoggedIn ? (
+              <div className="flex items-center gap-4">
+                <span className="text-teal-600 bg-teal-50 px-4 py-2 rounded-full font-black">Hi, {username}</span>
+                <button onClick={onLogout} className="text-red-400 hover:text-red-600">Logout</button>
+              </div>
+            ) : (
+              <>
+                <Link to="/login" className="text-slate-600 hover:text-teal-600">Log in</Link>
+                <Link 
+                  to="/signup" 
+                  className="bg-[#2eb0a1] text-white px-8 py-3 rounded-xl hover:bg-teal-700 transition-all shadow-xl shadow-teal-100 text-center"
+                >
+                  Sign up
+                </Link>
+              </>
+            )}
           </div>
         </nav>
 
-        {/* --- 2. HERO SECTION --- */}
+        {/* --- HERO SECTION --- */}
         <section className="bg-[#eef7f6] pt-24 pb-32 px-6 md:px-12 text-center">
           <div className="max-w-4xl mx-auto">
             <span className="bg-[#d5ece9] text-teal-700 px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest">
@@ -75,10 +108,6 @@ const MainGallery = ({ pets }) => {
               Find, Care, & Love Your <br />
               <span className="text-teal-500">Perfect Companion</span>
             </h1>
-            <p className="text-slate-500 text-lg md:text-xl font-medium mb-12 max-w-3xl mx-auto leading-relaxed">
-              The smart marketplace for all pets. Adopt, shop supplies, and book premium 
-              services all in one trusted platform in Sri Lanka.
-            </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-5">
               <button 
                 onClick={scrollToGallery}
@@ -96,19 +125,13 @@ const MainGallery = ({ pets }) => {
           </div>
         </section>
 
-        {/* --- 3. GALLERY SECTION --- */}
+        {/* --- GALLERY SECTION --- */}
         <div ref={gallerySectionRef} className="p-6 md:p-12 min-h-screen max-w-7xl mx-auto">
           <header className="flex flex-col md:flex-row md:items-center justify-between mb-10">
-            <div>
-              <h2 className="text-4xl font-black text-slate-800 tracking-tight">
-                {selectedSpecies === 'All' ? 'Available Pets' : `${selectedSpecies}s for Adoption`}
-              </h2>
-              <p className="text-slate-400 text-sm font-semibold mt-1">
-                Showing {filteredPets.length} furry friends ready for a home
-              </p>
-            </div>
+            <h2 className="text-4xl font-black text-slate-800 tracking-tight">
+              {selectedSpecies === 'All' ? 'Available Pets' : `${selectedSpecies}s for Adoption`}
+            </h2>
 
-            {/* Category Filter Chips (replacing the sidebar functionality) */}
             <div className="flex gap-2 mt-6 md:mt-0 overflow-x-auto pb-2 no-scrollbar">
               {categories.map(cat => (
                 <button 
@@ -126,29 +149,12 @@ const MainGallery = ({ pets }) => {
             </div>
           </header>
 
-          <div className="mb-12 relative max-w-2xl mx-auto">
-            <input 
-              type="text" 
-              placeholder="Search by breed or name..." 
-              value={searchTerm} 
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full p-5 pl-14 rounded-[2rem] border-2 border-slate-50 focus:border-teal-500 outline-none bg-slate-50 focus:bg-white font-bold text-slate-700 transition-all shadow-sm" 
-            />
-            <span className="absolute left-6 top-1/2 -translate-y-1/2">🔍</span>
-          </div>
-
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 pb-20">
-            {filteredPets.length > 0 ? (
-              filteredPets.map(pet => (
-                <div key={pet.id} onClick={() => setSelectedPet(pet)} className="cursor-pointer">
-                  <PetCard pet={pet} />
-                </div>
-              ))
-            ) : (
-              <div className="col-span-full py-20 text-center bg-slate-50 rounded-[3rem] border-2 border-dashed border-slate-200">
-                 <p className="text-slate-400 font-bold text-lg">No pets found matching your criteria.</p>
+            {filteredPets.map(pet => (
+              <div key={pet.id} onClick={() => setSelectedPet(pet)} className="cursor-pointer">
+                <PetCard pet={pet} />
               </div>
-            )}
+            ))}
           </div>
         </div>
       </main>
@@ -163,30 +169,73 @@ const MainGallery = ({ pets }) => {
   );
 };
 
+// --- MAIN APP COMPONENT ---
 function App() {
   const [pets, setPets] = useState([]);
+  const [isLoggedIn, setIsLoggedIn] = useState(localStorage.getItem('isLoggedIn') === 'true');
+  const [username, setUsername] = useState(localStorage.getItem('username') || '');
 
   const refreshPets = async () => {
     try {
-      const res = await fetch("http://localhost:8080/api/pets");
-      if (!res.ok) throw new Error("Connection failed");
-      const data = await res.json();
-      setPets(data);
+      const res = await axios.get("http://localhost:8080/api/pets");
+      setPets(res.data);
     } catch (err) { 
-      console.error("Backend Error:", err); 
+      console.error("Backend Connection Failed:", err); 
     }
+  };
+
+  const handleLogout = () => {
+    localStorage.clear();
+    setIsLoggedIn(false);
+    setUsername('');
+    window.location.href = "/"; // Hard refresh to clear all states
   };
 
   useEffect(() => {
     refreshPets();
+    // Sync login state if storage changes
+    const checkAuth = () => {
+      setIsLoggedIn(localStorage.getItem('isLoggedIn') === 'true');
+      setUsername(localStorage.getItem('username') || '');
+    };
+    window.addEventListener('storage', checkAuth);
+    return () => window.removeEventListener('storage', checkAuth);
   }, []);
 
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<MainGallery pets={pets} />} />
+        <Route path="/" element={
+          <MainGallery 
+            pets={pets} 
+            isLoggedIn={isLoggedIn} 
+            username={username} 
+            onLogout={handleLogout} 
+          />
+        } />
         <Route path="/store" element={<Store />} />
-        <Route path="/admin" element={<AdminPanel pets={pets} refreshPets={refreshPets} />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+        
+        <Route path="/admin" element={
+          <ProtectedRoute>
+            <AdminPanel pets={pets} refreshPets={refreshPets} />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/admin/add-product" element={
+          <ProtectedRoute>
+            <AddProductForm />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/admin/add-pet" element={
+          <ProtectedRoute>
+            <AddPetForm />
+          </ProtectedRoute>
+        } />
+
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
   );
