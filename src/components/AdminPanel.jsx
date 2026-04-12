@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import axios from 'axios'; 
 import { 
   PlusCircle, Trash2, LayoutDashboard, ArrowLeft, 
-  Dog, Camera, Mail, Phone, User, CheckCircle2 
+  Dog, Camera, Mail, Phone, User, CheckCircle2, PackageOpen, XCircle, Eye 
 } from 'lucide-react';
 
 const AdminPanel = ({ pets, refreshPets }) => {
@@ -10,9 +11,12 @@ const AdminPanel = ({ pets, refreshPets }) => {
     name: '', breed: '', species: 'Dog', age: '', price: '', imageUrl: '', description: ''
   });
   const [inquiries, setInquiries] = useState([]);
+  const [rehomeRequests, setRehomeRequests] = useState([]); 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Fetch Inquiries from Java Backend
+  // NEW STATE: For the "See Details" Review Modal
+  const [selectedRequest, setSelectedRequest] = useState(null);
+
   const fetchInquiries = async () => {
     try {
       const res = await fetch('http://localhost:8080/api/pets/inquiries');
@@ -23,8 +27,19 @@ const AdminPanel = ({ pets, refreshPets }) => {
     }
   };
 
+  const fetchRehomeRequests = async () => {
+    try {
+      const res = await fetch('http://localhost:8080/api/admin/pending-pets');
+      const data = await res.json();
+      setRehomeRequests(data);
+    } catch (err) {
+      console.error("Error fetching rehome requests:", err);
+    }
+  };
+
   useEffect(() => {
     fetchInquiries();
+    fetchRehomeRequests();
   }, []);
 
   const handleSubmit = async (e) => {
@@ -45,6 +60,34 @@ const AdminPanel = ({ pets, refreshPets }) => {
       console.error("Failed to add pet:", error);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleApproveRehome = async (id) => {
+    try {
+      const response = await fetch(`http://localhost:8080/api/admin/approve/${id}`, {
+        method: 'POST'
+      });
+      if (response.ok) {
+        alert("Pet Approved and added to Active Listings!");
+        setSelectedRequest(null); // Close modal if open
+        fetchRehomeRequests();
+        refreshPets();
+      }
+    } catch (err) {
+      console.error("Approval failed:", err);
+    }
+  };
+
+  const handleRejectRehome = async (id) => {
+    if (window.confirm("Are you sure you want to reject this rehome request?")) {
+      try {
+        await fetch(`http://localhost:8080/api/admin/reject/${id}`, { method: 'DELETE' });
+        setSelectedRequest(null); // Close modal if open
+        fetchRehomeRequests();
+      } catch (err) {
+        console.error("Rejection failed:", err);
+      }
     }
   };
 
@@ -147,11 +190,57 @@ const AdminPanel = ({ pets, refreshPets }) => {
             </div>
           </div>
 
-          {/* RIGHT COLUMN: INVENTORY & INBOX */}
+          {/* RIGHT COLUMN: INBOXES & INVENTORY */}
           <div className="lg:col-span-8 space-y-8">
             
-            {/* INBOX SECTION */}
+            {/* REHOME INBOX SECTION */}
             <div className="bg-slate-900 rounded-[2.5rem] shadow-xl p-8 text-white overflow-hidden relative">
+              <div className="flex items-center justify-between mb-8 relative z-10">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-white/10 rounded-2xl backdrop-blur-md">
+                    <PackageOpen size={24} className="text-teal-400" />
+                  </div>
+                  <h2 className="text-xl font-black uppercase tracking-wider">Rehome Inbox</h2>
+                </div>
+                <span className="bg-teal-500 text-white text-[10px] font-black px-3 py-1 rounded-full">{rehomeRequests.length} REQUESTS</span>
+              </div>
+
+              <div className="space-y-4 relative z-10">
+                {rehomeRequests.map(req => (
+                  <div key={req.id} className="group flex items-center justify-between p-5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-[2rem] transition-all">
+                    <div className="flex items-center gap-4">
+                       <img src={req.imageUrl} alt="" className="w-14 h-14 rounded-2xl object-cover border border-white/10" />
+                       <div>
+                         <p className="font-black text-lg">{req.name}</p>
+                         <p className="text-teal-400 font-bold text-sm uppercase tracking-tighter">{req.breed} • Age {req.age}</p>
+                       </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {/* SEE DETAILS BUTTON */}
+                      <button 
+                        onClick={() => setSelectedRequest(req)}
+                        className="px-4 py-2 bg-white/10 text-white rounded-xl hover:bg-white/20 transition-all font-bold text-xs flex items-center gap-2"
+                      >
+                        <Eye size={16} /> Details
+                      </button>
+                      <button 
+                        onClick={() => handleApproveRehome(req.id)}
+                        className="p-3 bg-teal-500 text-white rounded-xl hover:bg-teal-400 transition-all shadow-lg shadow-teal-900/40"
+                        title="Quick Approve"
+                      >
+                        <CheckCircle2 size={20} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {rehomeRequests.length === 0 && (
+                  <p className="text-white/20 text-center py-6 font-bold italic tracking-widest">No pending rehome requests.</p>
+                )}
+              </div>
+            </div>
+
+            {/* ADOPTION INBOX SECTION */}
+            <div className="bg-slate-900 rounded-[2.5rem] shadow-xl p-8 text-white overflow-hidden relative border-t border-white/5">
               <div className="flex items-center justify-between mb-8 relative z-10">
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-white/10 rounded-2xl backdrop-blur-md">
@@ -195,8 +284,6 @@ const AdminPanel = ({ pets, refreshPets }) => {
                   <p className="text-white/20 text-center py-10 font-bold italic tracking-widest">Your inbox is empty.</p>
                 )}
               </div>
-              {/* Decorative background circle */}
-              <div className="absolute -top-20 -right-20 w-64 h-64 bg-teal-500/10 rounded-full blur-3xl"></div>
             </div>
 
             {/* INVENTORY TABLE */}
@@ -250,10 +337,68 @@ const AdminPanel = ({ pets, refreshPets }) => {
                 </table>
               </div>
             </div>
-
           </div>
         </div>
       </div>
+
+      {/* --- REHOME DETAIL REVIEW MODAL --- */}
+      {selectedRequest && (
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4 z-[100] animate-in fade-in duration-300">
+          <div className="bg-white rounded-[3rem] w-full max-w-2xl overflow-hidden shadow-2xl relative border border-white">
+            <button 
+                onClick={() => setSelectedRequest(null)}
+                className="absolute top-6 right-6 p-3 bg-slate-100 hover:bg-slate-900 hover:text-white rounded-2xl transition-all z-10"
+            >
+                <XCircle size={20} />
+            </button>
+
+            <div className="grid grid-cols-1 md:grid-cols-2">
+                {/* Image Section */}
+                <div className="h-64 md:h-full relative group">
+                    <img src={selectedRequest.imageUrl} alt="" className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent"></div>
+                    <div className="absolute bottom-6 left-6">
+                        <span className="bg-teal-500 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest">
+                            {selectedRequest.species}
+                        </span>
+                    </div>
+                </div>
+
+                {/* Content Section */}
+                <div className="p-10 flex flex-col justify-between">
+                    <div>
+                        <h2 className="text-4xl font-black text-slate-900 tracking-tighter mb-1">{selectedRequest.name}</h2>
+                        <p className="text-teal-600 font-bold mb-6">Breed: {selectedRequest.breed} • Age: {selectedRequest.age}</p>
+                        
+                        <div className="space-y-4">
+                            <div>
+                                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Description</h4>
+                                <p className="text-slate-600 leading-relaxed font-medium bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                                    {selectedRequest.description || "No description provided."}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex gap-3 mt-10">
+                        <button 
+                            onClick={() => handleRejectRehome(selectedRequest.id)}
+                            className="flex-1 bg-rose-50 text-rose-600 py-4 rounded-2xl font-bold hover:bg-rose-500 hover:text-white transition-all border border-rose-100"
+                        >
+                            Reject
+                        </button>
+                        <button 
+                            onClick={() => handleApproveRehome(selectedRequest.id)}
+                            className="flex-[2] bg-teal-600 text-white py-4 rounded-2xl font-black shadow-xl shadow-teal-100 hover:bg-teal-700 transition-all flex items-center justify-center gap-2"
+                        >
+                            <CheckCircle2 size={20} /> Approve Listing
+                        </button>
+                    </div>
+                </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

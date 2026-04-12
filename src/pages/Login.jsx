@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate, Link } from 'react-router-dom';
-import { User, Lock, ArrowLeft } from 'lucide-react'; // For clean icons
+import { User, Lock, ArrowLeft } from 'lucide-react'; 
 
 const Login = () => {
     const [username, setUsername] = useState('');
@@ -13,36 +13,37 @@ const Login = () => {
         e.preventDefault();
         setLoading(true);
         try {
-            // Hits your AuthController login endpoint
+            // Hits the AuthController login endpoint
             const response = await axios.post('http://localhost:8080/api/auth/login', {
                 username, 
                 password
             });
 
             if (response.status === 200) {
-                // IMPORTANT: The backend should return user data including their role
+                // Data returned from backend (includes id, username, role, etc.)
                 const userData = response.data; 
                 
-                // Save general login status
+                // Save login status to localStorage
                 localStorage.setItem('isLoggedIn', 'true');
-                localStorage.setItem('username', username);
+                localStorage.setItem('username', userData.username);
+                localStorage.setItem('userRole', userData.role);
 
-                // DYNAMIC ROLE CHECK: 
-                // If the user has an 'ADMIN' role, give them admin access
+                // DYNAMIC ROLE REDIRECTION:
                 if (userData.role === 'ADMIN') {
                     localStorage.setItem('isAdmin', 'true');
                     alert("Welcome back, Admin!");
-                    navigate('/admin'); // Redirect to Admin Panel
+                    navigate('/admin'); // Redirect to your Admin Panel
                 } else {
-                    // Regular user login
                     localStorage.setItem('isAdmin', 'false');
-                    alert(`Welcome back, ${username}!`);
+                    alert(`Welcome back, ${userData.username}!`);
                     navigate('/'); // Redirect to Home/Gallery
                 }
             }
         } catch (error) {
             console.error("Login Error:", error);
-            alert(error.response?.data || "Wrong credentials, try again!");
+            // Handles both 401 (Wrong pass) and 404 (User not found)
+            const errorMessage = error.response?.data || "Wrong credentials, try again!";
+            alert(errorMessage);
         } finally {
             setLoading(false);
         }

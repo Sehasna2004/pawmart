@@ -10,9 +10,10 @@ import Store from './Store';
 import Login from './pages/Login'; 
 import Signup from './pages/Signup'; 
 
-// Import BOTH forms
+// Import Form Pages
 import AddProductForm from './pages/AddProductForm';
 import AddPetForm from './pages/AddPetForm';
+import RehomePetForm from './pages/RehomePetForm';
 
 // --- AUTH PROTECTION COMPONENT ---
 const ProtectedRoute = ({ children }) => {
@@ -65,6 +66,7 @@ const MainGallery = ({ pets, isLoggedIn, username, onLogout }) => {
               <Link to="/" className="hover:text-teal-600 transition-colors">Home</Link>
               <button onClick={scrollToGallery} className="hover:text-teal-600 transition-colors">Pets</button>
               <Link to="/store" className="hover:text-teal-600 transition-colors">Store</Link>
+              <Link to="/signup" className="hover:text-teal-600 transition-colors">Rehome</Link>
               <Link to="/services" className="hover:text-teal-600 transition-colors">Services</Link>
               <Link to="/about" className="hover:text-teal-600 transition-colors">About</Link>
               <Link to="/contact" className="hover:text-teal-600 transition-colors">Contact</Link>
@@ -98,9 +100,9 @@ const MainGallery = ({ pets, isLoggedIn, username, onLogout }) => {
           </div>
         </nav>
 
-        {/* --- HERO SECTION --- */}
+        {/* --- UPDATED HERO SECTION --- */}
         <section className="bg-[#eef7f6] pt-24 pb-32 px-6 md:px-12 text-center">
-          <div className="max-w-4xl mx-auto">
+          <div className="max-w-5xl mx-auto">
             <span className="bg-[#d5ece9] text-teal-700 px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest">
               Your Pet's Happy Place
             </span>
@@ -108,18 +110,31 @@ const MainGallery = ({ pets, isLoggedIn, username, onLogout }) => {
               Find, Care, & Love Your <br />
               <span className="text-teal-500">Perfect Companion</span>
             </h1>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-5">
+            
+            {/* THREE BUTTON LAYOUT */}
+            <div className="flex flex-col md:flex-row items-center justify-center gap-5 mt-10">
+              {/* BUTTON 1: See Our Pets (Renamed) */}
               <button 
                 onClick={scrollToGallery}
-                className="bg-[#2eb0a1] text-white px-12 py-5 rounded-full font-black shadow-xl shadow-teal-100 hover:bg-teal-700 transition-all active:scale-95"
+                className="bg-[#2eb0a1] text-white px-10 py-5 rounded-full font-black shadow-xl shadow-teal-100 hover:bg-teal-700 transition-all active:scale-95 min-w-[220px]"
               >
-                🔍 Find a Pet
+                🔍 See Our Pets
               </button>
+
+              {/* BUTTON 2: Adopt a Pet (New) */}
               <Link 
-                to="/store"
-                className="bg-white text-slate-700 px-12 py-5 rounded-full font-black shadow-sm border border-slate-100 hover:bg-slate-50 transition-all"
+                to="/signup"
+                className="bg-white text-slate-700 px-10 py-5 rounded-full font-black shadow-md border border-slate-100 hover:bg-slate-50 transition-all min-w-[220px]"
               >
-                Shop Supplies
+                ❤️ Adopt a Pet
+              </Link>
+              
+              {/* BUTTON 3: Rehome a Pet (Existing) */}
+              <Link 
+                to="/signup"
+                className="bg-white text-slate-700 px-10 py-5 rounded-full font-black shadow-md border border-slate-100 hover:bg-slate-50 transition-all min-w-[220px]"
+              >
+                🤝 Rehome a Pet
               </Link>
             </div>
           </div>
@@ -188,12 +203,11 @@ function App() {
     localStorage.clear();
     setIsLoggedIn(false);
     setUsername('');
-    window.location.href = "/"; // Hard refresh to clear all states
+    window.location.href = "/"; 
   };
 
   useEffect(() => {
     refreshPets();
-    // Sync login state if storage changes
     const checkAuth = () => {
       setIsLoggedIn(localStorage.getItem('isLoggedIn') === 'true');
       setUsername(localStorage.getItem('username') || '');
@@ -216,7 +230,8 @@ function App() {
         <Route path="/store" element={<Store />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
-        
+        <Route path="/rehome-pet" element={<RehomePetForm />} />
+
         <Route path="/admin" element={
           <ProtectedRoute>
             <AdminPanel pets={pets} refreshPets={refreshPets} />
